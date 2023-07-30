@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@fastify/mysql": "^4.1.0",
+    "dotenv": "^16.3.1",
     "fastify": "^4.21.0"
   },
   "type": "module"

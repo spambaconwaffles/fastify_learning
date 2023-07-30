@@ -1,18 +1,25 @@
-// Import the framework and instantiate it
+import 'dotenv/config'
+// console.log(process.env)
+// ESM
 import Fastify from 'fastify'
+// ecmascript need .js extension
+import dbConnector from './our-db-connector.js'
+import firstRoute from './our-first-route.js'
+
+/**
+ * @type {import('fastify').FastifyInstance} Instance of Fastify
+ */
 const fastify = Fastify({
   logger: true
 })
 
-// Declare a route
-fastify.get('/', async function handler (request, reply) {
-  return { hello: 'world' }
-})
+fastify.register(dbConnector)
+fastify.register(firstRoute)
 
-// Run the server!
-try {
-  await fastify.listen({ port: 3000 })
-} catch (err) {
-  fastify.log.error(err)
-  process.exit(1)
-}
+fastify.listen({ port: 3000 }, function (err, address) {
+  if (err) {
+    fastify.log.error(err)
+    process.exit(1)
+  }
+  // Server is now listening on ${address}
+})
