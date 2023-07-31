@@ -28,6 +28,24 @@ export default async function routes(fastify, options) {
     return reply
   })
 
+  // Delete specific todo item
+  fastify.delete('/todoitems/:id', async (request, reply) => {
+    fastify.mysql.query(
+      'DELETE FROM todo_items WHERE id=?',
+      [request.params.id],
+      function onResult(err, result) {
+        if (err) {
+          fastify.log.error(err)
+        }
+
+        // console.log(result)
+        reply.send(result)
+      }
+    )
+
+    return reply
+  })
+
   // Define schema for new todo items
   const todoItem_schema = {
     type: 'object',
@@ -50,7 +68,6 @@ export default async function routes(fastify, options) {
         if (err) {
           fastify.log.error(err)
         }
-        
 
         // console.log(result)
         reply.status(201).send(result)
@@ -59,27 +76,6 @@ export default async function routes(fastify, options) {
 
     return reply
   })
-
-  // Delete specific todo item
-  fastify.delete('/todoitems/:id', async (request, reply) => {
-    fastify.mysql.query(
-      'DELETE FROM todo_items WHERE id=?',
-      [request.params.id],
-      function onResult(err, result) {
-        if (err) {
-          fastify.log.error(err)
-        }
-
-        // console.log(result)
-        reply.send(result)
-      }
-    )
-
-    // Issue with nodeJS streams require returning reply
-    // https://stackoverflow.com/questions/76207360/why-does-fastify-send-a-response-and-doesnt-wait-for-my-response
-    return reply
-  })
-
 
   fastify.put('/todoitems/:id', { schema }, async (request, reply) => {
     fastify.mysql.query(
@@ -95,10 +91,6 @@ export default async function routes(fastify, options) {
       }
     )
 
-    // Issue with nodeJS streams require returning reply
-    // https://stackoverflow.com/questions/76207360/why-does-fastify-send-a-response-and-doesnt-wait-for-my-response
     return reply
   })
-
-
 }
