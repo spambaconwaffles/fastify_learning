@@ -2,6 +2,8 @@ import 'dotenv/config'
 // console.log(process.env)
 // ESM
 import Fastify from 'fastify'
+
+// Need install cors to communicate with frontend
 import cors from '@fastify/cors'
 
 // ecmascript need .js extension
@@ -16,6 +18,8 @@ const fastify = Fastify({
 })
 
 await fastify.register(cors, {
+  // frontend url, should probably be in .env
+  // only allow frontend url to access server
   origin: "http://localhost:8080"
 })
 
