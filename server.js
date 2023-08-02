@@ -2,6 +2,8 @@ import 'dotenv/config'
 // console.log(process.env)
 // ESM
 import Fastify from 'fastify'
+import cors from '@fastify/cors'
+
 // ecmascript need .js extension
 import dbConnector from './our-db-connector.js'
 import firstRoute from './our-first-route.js'
@@ -11,6 +13,10 @@ import firstRoute from './our-first-route.js'
  */
 const fastify = Fastify({
   logger: true
+})
+
+await fastify.register(cors, {
+  origin: "http://localhost:8080"
 })
 
 fastify.register(dbConnector)
