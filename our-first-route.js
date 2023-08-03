@@ -28,6 +28,27 @@ export default async function routes(fastify, options) {
     return reply
   })
 
+  // Fetch single todo item by id
+  fastify.get('/todoitems/:id', async (request, reply) => {
+    // fastify need define SQL query, is not an ORM
+    fastify.mysql.query(
+      'SELECT * FROM todo_items WHERE id=?',
+      [request.params.id],
+      function onResult(err, result) {
+        if (err) {
+          fastify.log.error(err)
+        }
+
+        // console.log(result)
+        reply.send(result)
+      }
+    )
+
+    // Issue with nodeJS streams require returning reply
+    // https://stackoverflow.com/questions/76207360/why-does-fastify-send-a-response-and-doesnt-wait-for-my-response
+    return reply
+  })
+
   // Delete specific todo item
   fastify.delete('/todoitems/:id', async (request, reply) => {
     fastify.mysql.query(
