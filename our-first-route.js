@@ -70,9 +70,9 @@ export default async function routes(fastify, options) {
   // Define schema for new todo items
   const todoItem_schema = {
     type: 'object',
-    required: ['todo_item'],
+    required: ['todo_desc'],
     properties: {
-      'todo_item': { type: 'string' }
+      'todo_desc': { type: 'string' }
     }
   }
 
@@ -84,27 +84,34 @@ export default async function routes(fastify, options) {
   fastify.post('/todoitems', { schema }, async (request, reply) => {
     fastify.mysql.query(
       'INSERT INTO todo_items(todo_desc) VALUES (?)',
-      [request.body['todo_item']], // we can use the `request.body` object to get the data sent by the client
+      [request.body['todo_desc']], // we can use the `request.body` object to get the data sent by the client
       function onResult(err, result) {
         if (err) {
           fastify.log.error(err)
+          reply.statusCode = 400
+          reply.send(err)
         }
 
         // console.log(result)
-        reply.status(201).send(result)
+        reply.statusCode = 201
+        
+        reply.send(result)
       }
     )
 
     return reply
   })
 
+  // Update todo item by id
   fastify.put('/todoitems/:id', { schema }, async (request, reply) => {
     fastify.mysql.query(
       'UPDATE todo_items SET todo_desc=? WHERE id=?',
-      [request.body['todo_item'], request.params.id],
+      [request.body['todo_desc'], request.params.id],
       function onResult(err, result) {
         if (err) {
           fastify.log.error(err)
+          reply.statusCode = 400
+          reply.send(err)
         }
 
         // console.log(result)
