@@ -11,28 +11,52 @@ export default async function routes(fastify, options) {
     return { hello: 'asdfsd' }
   })
 
-  // Fetch all todo list items from db
-  fastify.get('/todoitems', async (request, reply) => {
+  // Fetch todo list items that are not done yet
+  fastify.get('/todoitems/notdone', async (request, reply) => {
     // fastify need define SQL query, is not an ORM
-    fastify.mysql.query('SELECT * FROM todo_items', function onResult(err, result) {
-      if (err) {
-        fastify.log.error(err)
-      }
+    fastify.mysql.query(
+      'SELECT * FROM todo_items WHERE completed=false',
+      function onResult(err, result) {
+        if (err) {
+          fastify.log.error(err)
+        }
 
-      // console.log(result)
-      reply.send(result)
-    })
+        // console.log(result)
+        reply.send(result)
+      }
+    )
 
     // Issue with nodeJS streams require returning reply
     // https://stackoverflow.com/questions/76207360/why-does-fastify-send-a-response-and-doesnt-wait-for-my-response
     return reply
   })
 
-  // Fetch single todo item by id
+  // Fetch todo list items that are completed
+  fastify.get('/todoitems/done', async (request, reply) => {
+    // fastify need define SQL query, is not an ORM
+    fastify.mysql.query(
+      'SELECT * FROM todo_items WHERE completed=true',
+      function onResult(err, result) {
+        if (err) {
+          fastify.log.error(err)
+        }
+
+        // console.log(result)
+        reply.send(result)
+      }
+    )
+
+    // Issue with nodeJS streams require returning reply
+    // https://stackoverflow.com/questions/76207360/why-does-fastify-send-a-response-and-doesnt-wait-for-my-response
+    return reply
+  })
+
+  // Fetch single todo item by id and not completed yet
+  // can only update item when not completed
   fastify.get('/todoitems/:id', async (request, reply) => {
     // fastify need define SQL query, is not an ORM
     fastify.mysql.query(
-      'SELECT * FROM todo_items WHERE id=?',
+      'SELECT * FROM todo_items WHERE id=? AND completed=false',
       [request.params.id],
       function onResult(err, result) {
         if (err) {
@@ -50,6 +74,7 @@ export default async function routes(fastify, options) {
   })
 
   // Delete specific todo item
+  // Can delete both completed and not completed items
   fastify.delete('/todoitems/:id', async (request, reply) => {
     fastify.mysql.query(
       'DELETE FROM todo_items WHERE id=?',
@@ -82,9 +107,11 @@ export default async function routes(fastify, options) {
   }
 
   // Add new todo item
+  // When add, item is not completed
   fastify.post('/todoitems', { schema }, async (request, reply) => {
     // The schema turns null values to empty string because the schema
     // has type coercion by default.
+    // Allow items without any doneBy date
     if (request.body['doneBy'] !== '') {
       // Get current date
       // The current time is removed before the date is passed to Date() to ensure
@@ -113,18 +140,18 @@ export default async function routes(fastify, options) {
     }
 
     fastify.mysql.query(
-      'INSERT INTO todo_items(todo_desc, doneBy) VALUES (?, ?)',
+      'INSERT INTO todo_items(todo_desc, doneBy, completed) VALUES (?, ?, false)',
       [request.body['todo_desc'], request.body['doneBy']], // we can use the `request.body` object to get the data sent by the client
       function onResult(err, result) {
         if (err) {
           fastify.log.error(err)
           reply.statusCode = 500
           reply.send(err)
+          return
         }
 
         // console.log(result)
         reply.statusCode = 201
-
         reply.send(result)
       }
     )
@@ -132,7 +159,8 @@ export default async function routes(fastify, options) {
     return reply
   })
 
-  // Update todo item by id
+  // Update todo item by id for description and date only, and only for not completed items
+  // Updating the completed state should use another PUT route
   fastify.put('/todoitems/:id', { schema }, async (request, reply) => {
     // The schema turns null values to empty string because the schema
     // has type coercion by default.
@@ -163,14 +191,70 @@ export default async function routes(fastify, options) {
       }
     }
 
+    // Validate if the item is not completed
     fastify.mysql.query(
-      'UPDATE todo_items SET todo_desc=?, doneBy=? WHERE id=?',
-      [request.body['todo_desc'], request.body['doneBy'], request.params.id],
+      'SELECT id FROM todo_items WHERE id=? AND completed=false',
+      [request.params.id],
       function onResult(err, result) {
         if (err) {
           fastify.log.error(err)
           reply.statusCode = 500
           reply.send(err)
+          return
+        }
+
+        // If there is no result returned, the item is completed or does not exist, and update is not allowed
+        if (result.length === 0) {
+          fastify.log.error('item is already completed or does not exist')
+          reply.statusCode = 400
+          reply.send({ 'error': 'item is already completed or does not exist' })
+        } else {
+          // if item exists and is not completed yet, proceed with update
+          fastify.mysql.query(
+            'UPDATE todo_items SET todo_desc=?, doneBy=? WHERE id=?',
+            [request.body['todo_desc'], request.body['doneBy'], request.params.id],
+            function onResult(err, result) {
+              if (err) {
+                fastify.log.error(err)
+                reply.statusCode = 500
+                reply.send(err)
+                return
+              }
+
+              // console.log(result)
+              reply.send(result)
+            }
+          )
+        } // end if else
+      } // end onResult for SELECT that checks if item exists and is not completed
+    ) // end SELECT query
+
+    return reply
+  })
+
+  // Define schema for updating completed state of items
+  const completedState_schema = {
+    type: 'object',
+    required: ['completed'],
+    properties: {
+      'completed': { type: 'boolean' }
+    }
+  }
+
+  const stateSchema = {
+    body: completedState_schema
+  }
+
+  fastify.put('/updateCompletedState/:id', { stateSchema }, async (request, reply) => {
+    fastify.mysql.query(
+      'UPDATE todo_items SET completed=? WHERE id=?',
+      [request.body['completed'], request.params.id],
+      function onResult(err, result) {
+        if (err) {
+          fastify.log.error(err)
+          reply.statusCode = 500
+          reply.send(err)
+          return
         }
 
         // console.log(result)
@@ -180,4 +264,4 @@ export default async function routes(fastify, options) {
 
     return reply
   })
-}
+} // end defining routes
