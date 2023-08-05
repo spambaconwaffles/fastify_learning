@@ -12,7 +12,7 @@ export default async function routes(fastify, options) {
   })
 
   // Fetch todo list items
-  fastify.get('/todoitems', async (request, reply) => {
+  fastify.get('/fetchallItems', async (request, reply) => {
     // fastify need define SQL query, is not an ORM
     fastify.mysql.query(
       'SELECT * FROM todo_items',
