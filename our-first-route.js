@@ -11,31 +11,11 @@ export default async function routes(fastify, options) {
     return { hello: 'asdfsd' }
   })
 
-  // Fetch todo list items that are not done yet
-  fastify.get('/todoitems/notdone', async (request, reply) => {
+  // Fetch todo list items
+  fastify.get('/todoitems', async (request, reply) => {
     // fastify need define SQL query, is not an ORM
     fastify.mysql.query(
-      'SELECT * FROM todo_items WHERE completed=false',
-      function onResult(err, result) {
-        if (err) {
-          fastify.log.error(err)
-        }
-
-        // console.log(result)
-        reply.send(result)
-      }
-    )
-
-    // Issue with nodeJS streams require returning reply
-    // https://stackoverflow.com/questions/76207360/why-does-fastify-send-a-response-and-doesnt-wait-for-my-response
-    return reply
-  })
-
-  // Fetch todo list items that are completed
-  fastify.get('/todoitems/done', async (request, reply) => {
-    // fastify need define SQL query, is not an ORM
-    fastify.mysql.query(
-      'SELECT * FROM todo_items WHERE completed=true',
+      'SELECT * FROM todo_items',
       function onResult(err, result) {
         if (err) {
           fastify.log.error(err)
